@@ -42,5 +42,13 @@
        return videoSmsTplSyncService.noauditPush("test", "test", "test");
    }
    ```
+   
+5. 目前仅支持FeignClient的几个字段
+   
+   value
+
+   name
+
+   configuration
 
    ​
