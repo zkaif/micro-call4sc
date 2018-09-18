@@ -1,0 +1,15 @@
+*.settings
+*.classpath
+*.project
+*.bak
+*.class
+target
+.sass-cache
+*.log
+bin/**
+.idea/**
+*.iml
+submode
+.svn
+.idea/
+ds-mongo.xml

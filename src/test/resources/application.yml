@@ -1,0 +1,8 @@
+call4sc:
+  client-package: com
+  zull-addrs: localhost:8889
+server:
+  port: 8080
+#  client-decoder-classname:
+#  client-encoder-classname:
+#  path-process:
