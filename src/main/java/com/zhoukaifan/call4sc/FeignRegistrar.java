@@ -9,6 +9,7 @@ import feign.Client;
 import feign.codec.Decoder;
 import feign.codec.Encoder;
 import feign.optionals.OptionalDecoder;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
@@ -17,8 +18,10 @@ import org.reflections.Reflections;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.BeanFactoryAware;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.ObjectFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConstructorArgumentValues;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.GenericBeanDefinition;
@@ -27,16 +30,21 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.cloud.openfeign.support.ResponseEntityDecoder;
 import org.springframework.cloud.openfeign.support.SpringDecoder;
 import org.springframework.cloud.openfeign.support.SpringEncoder;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.ResourceLoaderAware;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.type.AnnotationMetadata;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.ResourceHttpMessageConverter;
+import org.springframework.http.converter.ResourceRegionHttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.support.AllEncompassingFormHttpMessageConverter;
+import org.springframework.http.converter.xml.Jaxb2RootElementHttpMessageConverter;
+import org.springframework.http.converter.xml.SourceHttpMessageConverter;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
@@ -44,12 +52,12 @@ import org.springframework.util.StringUtils;
  * @author ZhouKaifan(宸凯)
  */
 public class FeignRegistrar implements ImportBeanDefinitionRegistrar,
-        ResourceLoaderAware, EnvironmentAware,ApplicationContextAware{
+        ResourceLoaderAware, EnvironmentAware,BeanFactoryAware{
 
     private static final Logger log = LoggerFactory.getLogger(FeignRegistrar.class);
     private ResourceLoader resourceLoader;
     private Environment environment;
-    private ApplicationContext applicationContext;
+    private BeanFactory beanFactory;
     private Decoder decoder;
     private Encoder encoder;
     private PathProcess process;
@@ -58,7 +66,7 @@ public class FeignRegistrar implements ImportBeanDefinitionRegistrar,
             BeanDefinitionRegistry beanDefinitionRegistry) {
         Call4scConfigVO call4scConfigVO = new Call4scConfigVO();
 
-        init();
+        setBean(call4scConfigVO);
         processEnableCall4scClient(call4scConfigVO,annotationMetadata);
         processEnvironment(call4scConfigVO,environment);
         try {
@@ -101,30 +109,7 @@ public class FeignRegistrar implements ImportBeanDefinitionRegistrar,
             call4scConfigVO.getClientPackage().addAll(Arrays.asList(basePackagesStr.trim().split(",")));
         }
         String zullAddrs = environment.getProperty("call4sc.zull-addrs");
-
-        final ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.configure(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT, true);
-        ObjectFactory<HttpMessageConverters> messageConverters = new ObjectFactory<HttpMessageConverters>() {
-            @Override
-            public HttpMessageConverters getObject() throws BeansException {
-                HttpMessageConverter jacksonConverter = new MappingJackson2HttpMessageConverter(objectMapper);
-                return new HttpMessageConverters(jacksonConverter);
-            }
-        };
-        if (encoder == null) {
-            encoder = new SpringEncoder(messageConverters);
-        }
-        if (decoder == null) {
-            decoder = new OptionalDecoder(
-                    new ResponseEntityDecoder(new SpringDecoder(messageConverters)));
-        }
-        if (process==null){
-            process = new DefultPathProcess();
-        }
         call4scConfigVO.setZullAddrs(zullAddrs);
-        call4scConfigVO.setDecoder(decoder);
-        call4scConfigVO.setEncoder(encoder);
-        call4scConfigVO.setPathProcess(process);
     }
 
     private void registerClient(Client client,Class aClass,
@@ -165,6 +150,42 @@ public class FeignRegistrar implements ImportBeanDefinitionRegistrar,
         }
     }
 
+    public void setBean(Call4scConfigVO call4scConfigVO){
+        process = getBeanByBeanFactory(PathProcess.class);
+        decoder = getBeanByBeanFactory(Decoder.class);
+        encoder = getBeanByBeanFactory(Encoder.class);
+
+        ObjectFactory<HttpMessageConverters> messageConverters = new ObjectFactory<HttpMessageConverters>() {
+            @Override
+            public HttpMessageConverters getObject() throws BeansException {
+                return new HttpMessageConverters();
+            }
+        };
+        if (encoder == null) {
+            encoder = new SpringEncoder(messageConverters);
+        }
+        if (decoder == null) {
+            decoder = new OptionalDecoder(
+                    new ResponseEntityDecoder(new SpringDecoder(messageConverters)));
+        }
+        if (process==null){
+            process = new DefultPathProcess();
+        }
+        call4scConfigVO.setDecoder(decoder);
+        call4scConfigVO.setEncoder(encoder);
+        call4scConfigVO.setPathProcess(process);
+    }
+
+    private <T> T getBeanByBeanFactory(Class<T> aClass){
+        T t;
+        try {
+            t = beanFactory.getBean(aClass);
+        }catch (NoSuchBeanDefinitionException e){
+            t = null;
+        }
+        return t;
+    }
+
     @Override
     public void setEnvironment(Environment environment) {
         this.environment = environment;
@@ -177,13 +198,7 @@ public class FeignRegistrar implements ImportBeanDefinitionRegistrar,
     }
 
     @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
-    }
-
-    public void init(){
-        decoder = applicationContext.getBean(Decoder.class);
-        encoder = applicationContext.getBean(Encoder.class);
-        process = applicationContext.getBean(PathProcess.class);
+    public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+        this.beanFactory = beanFactory;
     }
 }
