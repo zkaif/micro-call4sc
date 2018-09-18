@@ -1,6 +1,8 @@
 ### micro-call4sc
 
-0.1.0
+从SpringCloud中剥离出feign框架的部分代码
+实现非SpringCloud项目调用SpringCloud服务
+调用时是通过调用zuul网关的方式实现
 
 1. 引入依赖
 
