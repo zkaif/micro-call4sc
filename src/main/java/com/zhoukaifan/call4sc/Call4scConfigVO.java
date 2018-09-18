@@ -1,6 +1,7 @@
 package com.zhoukaifan.call4sc;
 
 import com.zhoukaifan.call4sc.feign.PathProcess;
+import feign.Contract;
 import feign.codec.Decoder;
 import feign.codec.Encoder;
 import java.util.HashSet;
@@ -14,6 +15,7 @@ public class Call4scConfigVO {
     private Decoder decoder;
     private Encoder encoder;
     private PathProcess pathProcess;
+    private Contract contract;
     private Set<String> clientPackage = new HashSet<String>();
 
     public String getZullAddrs() {
@@ -50,6 +52,14 @@ public class Call4scConfigVO {
 
     public Set<String> getClientPackage() {
         return clientPackage;
+    }
+
+    public Contract getContract() {
+        return contract;
+    }
+
+    public void setContract(Contract contract) {
+        this.contract = contract;
     }
 
     public void setClientPackage(Set<String> clientPackage) {

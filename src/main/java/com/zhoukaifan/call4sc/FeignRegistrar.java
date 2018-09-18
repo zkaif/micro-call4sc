@@ -1,15 +1,13 @@
 package com.zhoukaifan.call4sc;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zhoukaifan.call4sc.feign.DefultPathProcess;
 import com.zhoukaifan.call4sc.feign.PathProcess;
 import com.zhoukaifan.call4sc.feign.RibbonClientFactory;
 import feign.Client;
+import feign.Contract;
 import feign.codec.Decoder;
 import feign.codec.Encoder;
 import feign.optionals.OptionalDecoder;
-import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
@@ -30,21 +28,13 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.cloud.openfeign.support.ResponseEntityDecoder;
 import org.springframework.cloud.openfeign.support.SpringDecoder;
 import org.springframework.cloud.openfeign.support.SpringEncoder;
+import org.springframework.cloud.openfeign.support.SpringMvcContract;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.ResourceLoaderAware;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.type.AnnotationMetadata;
-import org.springframework.http.converter.ByteArrayHttpMessageConverter;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.ResourceHttpMessageConverter;
-import org.springframework.http.converter.ResourceRegionHttpMessageConverter;
-import org.springframework.http.converter.StringHttpMessageConverter;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.http.converter.support.AllEncompassingFormHttpMessageConverter;
-import org.springframework.http.converter.xml.Jaxb2RootElementHttpMessageConverter;
-import org.springframework.http.converter.xml.SourceHttpMessageConverter;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
@@ -61,6 +51,7 @@ public class FeignRegistrar implements ImportBeanDefinitionRegistrar,
     private Decoder decoder;
     private Encoder encoder;
     private PathProcess process;
+    private Contract contract;
     @Override
     public void registerBeanDefinitions(AnnotationMetadata annotationMetadata,
             BeanDefinitionRegistry beanDefinitionRegistry) {
@@ -141,6 +132,9 @@ public class FeignRegistrar implements ImportBeanDefinitionRegistrar,
         if (call4scConfigVO.getEncoder()==null){
             throw new Call4scException("Encoder is null");
         }
+        if (call4scConfigVO.getContract()==null){
+            throw new Call4scException("Contract is null");
+        }
         if (call4scConfigVO.getClientPackage()==null||
                 call4scConfigVO.getClientPackage().isEmpty()){
             throw new Call4scException("ClientPackage is null");
@@ -154,6 +148,7 @@ public class FeignRegistrar implements ImportBeanDefinitionRegistrar,
         process = getBeanByBeanFactory(PathProcess.class);
         decoder = getBeanByBeanFactory(Decoder.class);
         encoder = getBeanByBeanFactory(Encoder.class);
+        contract = getBeanByBeanFactory(Contract.class);
 
         ObjectFactory<HttpMessageConverters> messageConverters = new ObjectFactory<HttpMessageConverters>() {
             @Override
@@ -171,9 +166,13 @@ public class FeignRegistrar implements ImportBeanDefinitionRegistrar,
         if (process==null){
             process = new DefultPathProcess();
         }
+        if (contract==null){
+            contract = new SpringMvcContract();
+        }
         call4scConfigVO.setDecoder(decoder);
         call4scConfigVO.setEncoder(encoder);
         call4scConfigVO.setPathProcess(process);
+        call4scConfigVO.setContract(contract);
     }
 
     private <T> T getBeanByBeanFactory(Class<T> aClass){
