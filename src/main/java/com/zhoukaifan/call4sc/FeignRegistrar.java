@@ -50,17 +50,15 @@ public class FeignRegistrar implements ImportBeanDefinitionRegistrar,
     private ResourceLoader resourceLoader;
     private Environment environment;
     private ApplicationContext applicationContext;
-    @Autowired
     private Decoder decoder;
-    @Autowired
     private Encoder encoder;
-    @Autowired
     private PathProcess process;
     @Override
     public void registerBeanDefinitions(AnnotationMetadata annotationMetadata,
             BeanDefinitionRegistry beanDefinitionRegistry) {
         Call4scConfigVO call4scConfigVO = new Call4scConfigVO();
 
+        init();
         processEnableCall4scClient(call4scConfigVO,annotationMetadata);
         processEnvironment(call4scConfigVO,environment);
         try {
@@ -181,5 +179,11 @@ public class FeignRegistrar implements ImportBeanDefinitionRegistrar,
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
+    }
+
+    public void init(){
+        decoder = applicationContext.getBean(Decoder.class);
+        encoder = applicationContext.getBean(Encoder.class);
+        process = applicationContext.getBean(PathProcess.class);
     }
 }
